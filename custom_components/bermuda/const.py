@@ -19,7 +19,7 @@ DOMAIN_DATA = f"{DOMAIN}_data"
 # that the component has been checked out from git, not pulled from
 # an officially built release. HACS will use the git tag (or the zip file,
 # either way it works).
-VERSION = "0.0.0"
+VERSION = "0.8.5"
 
 ATTRIBUTION = "Data provided by http://jsonplaceholder.typicode.com/"
 ISSUE_URL = "https://github.com/agittins/bermuda/issues"
@@ -181,6 +181,9 @@ DOCS[CONF_REF_POWER] = "Default RSSI for signal at 1 metre."
 CONF_SAVE_AND_CLOSE = "save_and_close"
 CONF_SCANNER_INFO = "scanner_info"
 CONF_RSSI_OFFSETS = "rssi_offsets"
+
+CONF_AREA_ENTITIES = "area_entities"
+DOCS[CONF_AREA_ENTITIES] = "Entity IDs used as area presence indicators. When triggered, the entity's area is used for area detection."
 
 CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL = "update_interval", 10
 DOCS[CONF_UPDATE_INTERVAL] = (
