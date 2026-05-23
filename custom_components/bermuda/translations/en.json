@@ -26,7 +26,14 @@
     "step": {
       "init": {
         "title": "Configure Bermuda",
-        "description": "Bermuda can currently see:\n- {device_counter_active} active out of {device_counter_devices} bluetooth devices.\n- {scanner_counter_active} active out of {scanner_counter_scanners} bluetooth scanner devices.\n\n{status}"
+        "description": "Bermuda can currently see:\n- {device_counter_active} active out of {device_counter_devices} bluetooth devices.\n- {scanner_counter_active} active out of {scanner_counter_scanners} bluetooth scanner devices.\n\n{status}",
+        "menu_options": {
+          "globalopts": "Global Options",
+          "selectdevices": "Select Devices",
+          "area_entities": "Area Entity Indicators",
+          "calibration1_global": "Calibration 1: Global",
+          "calibration2_scanners": "Calibration 2: Scanner RSSI Offsets"
+        }
       },
       "globalopts": {
         "title": "Global settings",
@@ -53,6 +60,16 @@
       "selectdevices": {
         "title": "Select Devices",
         "description": "Choose which devices you wish to track. If no devices appear below, then Bermuda is not seeing any data coming from Bluetooth scanners. Ensure you have an esphome ble_proxy device, Shelly devices with bluetooth proxy configured or a local bluetooth adaptor."
+      },
+      "area_entities": {
+        "title": "Area Entity Indicators",
+        "description": "Select entities to use as area presence indicators. When an entity state is 'on' or 'true', it is considered triggered and its area will be used to help determine where tracked devices are located. When state is 'off' or 'false', it is not triggered. The area is automatically read from the entity or its parent device.",
+        "data": {
+          "area_entities": "Area Indicator Entities"
+        },
+        "data_description": {
+          "area_entities": "Choose one or more entities (e.g. binary sensors, switches). Triggered when state is 'on' or 'true', not triggered when 'off' or 'false'. The entity must have an area assigned (either directly or via its device)."
+        }
       },
       "calibration1_global": {
         "title": "Calibration 1: Global",

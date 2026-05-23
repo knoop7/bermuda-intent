@@ -1,0 +1,140 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bermuda 蓝牙定位",
+        "description": "点击「提交」即可安装。如需帮助请访问 [GitHub 页面](https://github.com/agittins/bermuda)",
+        "data": {
+          "username": "用户名",
+          "password": "密码"
+        }
+      }
+    },
+    "error": {
+      "auth": "用户名或密码错误。"
+    },
+    "abort": {
+      "single_instance_allowed": "只能创建一个实例，不能重复添加。"
+    }
+  },
+  "options": {
+    "error": {
+      "some_active": "已检测到活跃设备，一切正常。",
+      "no_scanners": "还没有蓝牙扫描器！你需要先配好至少一个蓝牙代理（比如 ESPHome 蓝牙代理、Shelly 蓝牙代理、或者电脑自带的蓝牙适配器），Bermuda 才能工作。",
+      "no_devices": "扫描器没有报告任何蓝牙设备。你需要先解决这个问题，Bermuda 才能正常工作。"
+    },
+    "step": {
+      "init": {
+        "title": "Bermuda 设置",
+        "description": "当前状态：\n- 蓝牙设备：{device_counter_active} 个活跃 / 共 {device_counter_devices} 个\n- 蓝牙扫描器：{scanner_counter_active} 个活跃 / 共 {scanner_counter_scanners} 个\n\n{status}",
+        "menu_options": {
+          "globalopts": "全局设置",
+          "selectdevices": "选择要追踪的设备",
+          "area_entities": "区域指示实体",
+          "calibration1_global": "校准第一步：全局校准",
+          "calibration2_scanners": "校准第二步：各扫描器 RSSI 偏移"
+        }
+      },
+      "globalopts": {
+        "title": "全局设置",
+        "data": {
+          "max_area_radius": "区域检测最大半径（米）",
+          "max_velocity": "最大移动速度（米/秒）",
+          "devtracker_nothome_timeout": "离家判定超时（秒）",
+          "update_interval": "传感器更新间隔（秒）",
+          "smoothing_samples": "距离平滑采样数",
+          "attenuation": "环境衰减系数",
+          "ref_power": "参考信号强度（1米处的RSSI值）",
+          "configured_devices": "要追踪的设备"
+        },
+        "data_description": {
+          "max_area_radius": "设备离最近的蓝牙扫描器多远（米）以内，才算「在那个区域里」。\n- 设小了：设备在两个扫描器中间时会显示「未知」\n- 设大了：设备永远会显示在最近的区域里\n- 推荐值：10~20",
+          "max_velocity": "如果蓝牙信号暗示设备移动速度超过这个值，就忽略这次读数（防止信号抖动造成误判）。\n- 人正常走路约 1.4 米/秒\n- 推荐值：3（相当于时速 10 公里）",
+          "devtracker_nothome_timeout": "设备消失多少秒后，标记为「不在家」。\n- 设太小：设备会频繁在「在家/不在家」之间跳\n- 设太大：设备离开后要等很久才更新\n- 推荐值：30~300 秒",
+          "update_interval": "传感器数据多久更新一次。距离变近会立即触发，但距离变远会按这个间隔限速更新，防止数据库暴涨。\n- 推荐值：10 秒",
+          "smoothing_samples": "距离读数的平滑采样数量。数字越大，距离变远时反应越慢（距离变近不受影响）。\n- 推荐值：10 或 20",
+          "attenuation": "环境对蓝牙信号的衰减程度。在「参考信号强度」校准好 1 米距离后，调整这个值让其他距离也准确。\n- 墙多、家具多就调大\n- 空旷就调小\n- 推荐值：3",
+          "ref_power": "把你最常用的蓝牙信标放在最常用的扫描器旁边正好 1 米远，然后调整这个值，直到距离传感器显示的最小值（不是平均值）接近 1 米。\n- 这是校准的第一步\n- 推荐值：-55 左右"
+        }
+      },
+      "selectdevices": {
+        "title": "选择要追踪的设备",
+        "description": "选择你想要追踪位置的蓝牙设备。\n\n如果下面没有设备出现，说明 Bermuda 没有收到任何蓝牙数据。请确认你已经配好了蓝牙代理（ESPHome 蓝牙代理、Shelly 蓝牙代理、或者电脑自带的蓝牙适配器）。"
+      },
+      "area_entities": {
+        "title": "区域指示实体",
+        "description": "在这里添加用来辅助判断区域的实体。\n\n**工作原理：** 当实体状态为 `on` 或 `true` 时视为「触发」，`off` 或 `false` 时视为「未触发」。触发后，该实体所属的区域会自动参与被追踪设备的区域判断。区域信息会自动从实体本身或它所属的设备上读取，不需要手动指定。\n\n**适用场景举例：**\n- 人体传感器触发（on） → 说明有人在那个区域\n- 门窗传感器打开（on） → 说明有人在那个房间\n- 自定义开关打开（true） → 手动标记某个区域有人\n- 任何状态为 on/true 的实体都算触发",
+        "data": {
+          "area_entities": "区域指示实体"
+        },
+        "data_description": {
+          "area_entities": "选择一个或多个实体（比如人体传感器、门窗传感器、开关等）。\n\n触发条件：状态为 `on` 或 `true` 时算触发，`off` 或 `false` 时算未触发。\n\n注意：实体必须已经分配了区域（可以在实体设置或它所属设备的设置里分配），否则即使触发了也不会生效。"
+        }
+      },
+      "calibration1_global": {
+        "title": "校准第一步：全局校准",
+        "description": "这一步用来设定距离计算的全局默认值。\n\n{details}\n{summary}\n点击展开详细教程！{summary_end}\n\n选一对最常用的设备组合来做「参考对」。比如你大部分扫描器都是 ESPHome，那就选一个 ESPHome 扫描器；信标也选你最多的那款。\n\n操作步骤：\n- 在下面选好一个设备和一个扫描器作为「参考对」\n- 把设备放在扫描器正前方 1 米处，确保中间没有遮挡，也别靠近人体（人体会干扰蓝牙信号）\n- 点「提交」，看下面表格里的 RSSI 值。随时可以再点「提交」刷新\n- 等信号稳定后，把 RSSI 值填到「参考信号强度」里，再点「提交」\n- 现在距离应该接近 1 米了。不满意就反复调整\n- 接下来把设备搬到更远的地方（比如 5 米），用卷尺量好实际距离\n- 再点「提交」，这时距离读数可能不准\n- 调整「环境衰减系数」直到计算出的距离和实际距离一致\n- 满意后勾选「保存并关闭」，点「提交」\n{details_end}\n{suffix}",
+        "data": {
+          "configured_devices": "选择设备",
+          "configured_scanners": "选择扫描器",
+          "save_and_close": "保存并关闭",
+          "attenuation": "环境衰减系数",
+          "ref_power": "参考信号强度"
+        },
+        "data_description": {
+          "save_and_close": "校准满意后，勾选这个框再点「提交」。你的设置会被保存，然后可以继续下一步校准。\n还在调试的时候不要勾选。",
+          "attenuation": "先把「参考信号强度」调好让 1 米的读数准确，然后把设备搬远（比如 5 米），调整这个值直到远距离的读数也准确。\n点「提交」可以看到新的距离估算值。",
+          "ref_power": "把设备放在扫描器旁边正好 1 米远，调整这个值直到上面的距离读数接近 1 米。\n注意：每次改完要点「提交」才会重新计算。数值越小（越负），算出来的距离越短。"
+        }
+      },
+      "calibration2_scanners": {
+        "title": "校准第二步：各扫描器 RSSI 偏移",
+        "description": "这一步是可选的，但如果你的扫描器灵敏度不一样或者天线性能有差异，调一下会更准。\n\n调整每个扫描器的 RSSI 偏移值，直到计算出的距离和实际距离一致。第一步用过的那个「参考扫描器」保持为 0 就行。\n\n{suffix}",
+        "data": {
+          "configured_devices": "选择设备",
+          "save_and_close": "保存并关闭",
+          "scanner_info": "各扫描器的 RSSI 偏移值"
+        },
+        "data_description": {
+          "scanner_info": "填 0 表示使用全局默认值。填其他数字可以补偿该扫描器的信号偏差。\n- 负数 → 距离会变远\n- 正数 → 距离会变近\n\n调整到上面显示的估算距离和实际距离一致即可。"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "distance": {
+        "name": "距离"
+      },
+      "area": {
+        "name": "区域"
+      }
+    }
+  },
+  "services": {
+    "dump_devices": {
+      "name": "导出设备数据",
+      "description": "导出 Bermuda 内部的设备数据，可以限定特定地址。包含每个扫描器的 RSSI 和其他信息。",
+      "fields": {
+        "addresses": {
+          "name": "设备地址",
+          "description": "可选。输入一个或多个 MAC 地址（空格分隔）来筛选。留空则导出所有设备。"
+        },
+        "configured_devices": {
+          "name": "仅已配置设备",
+          "description": "勾选后只导出扫描器和已配置的追踪设备，不导出其他未配置的蓝牙设备。"
+        },
+        "redact": {
+          "name": "隐藏隐私信息",
+          "description": "勾选后会把 MAC 地址做脱敏处理，适合分享调试信息给别人时使用。"
+        }
+      }
+    }
+  },
+  "issues": {
+    "scanner_without_area": {
+      "title": "部分蓝牙代理没有设置区域",
+      "description": "Bermuda 需要所有蓝牙代理都设置好区域才能正常工作。\n\n请到「设备与服务」里找到每个代理的设备页面，点右上角的编辑按钮来分配区域。\n\n以下代理还没有分配区域：\n\n{scannerlist}"
+    }
+  }
+}
