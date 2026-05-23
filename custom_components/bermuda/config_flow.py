@@ -13,6 +13,8 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.selector import (
     DeviceSelector,
     DeviceSelectorConfig,
+    EntitySelector,
+    EntitySelectorConfig,
     ObjectSelector,
     SelectOptionDict,
     SelectSelector,
@@ -24,6 +26,7 @@ from .const import (
     ADDR_TYPE_IBEACON,
     ADDR_TYPE_PRIVATE_BLE_DEVICE,
     BDADDR_TYPE_RANDOM_RESOLVABLE,
+    CONF_AREA_ENTITIES,
     CONF_ATTENUATION,
     CONF_DEVICES,
     CONF_DEVTRACK_TIMEOUT,
@@ -151,20 +154,19 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
 
         if len(self.coordinator.scanner_list) == 0:
             messages["status"] = (
-                "You need to configure some bluetooth scanners before Bermuda will have anything to work with. "
-                "Any one of esphome bluetooth_proxy, Shelly bluetooth proxy or local bluetooth adaptor should get "
-                "you started."
+                "还没有蓝牙扫描器！请先配置至少一个蓝牙代理（ESPHome 蓝牙代理、Shelly 蓝牙代理、"
+                "或者电脑自带的蓝牙适配器），Bermuda 才能开始工作。"
             )
         elif active_devices == 0:
             messages["status"] = (
-                "No bluetooth devices are actively being reported from your scanners. "
-                "You will need to solve this before Bermuda can be of much help."
+                "扫描器没有报告任何蓝牙设备。"
+                "你需要先解决这个问题，Bermuda 才能正常定位。"
             )
         else:
-            messages["status"] = "You have at least some active devices, this is good."
+            messages["status"] = "已检测到活跃的蓝牙设备，一切正常。"
 
         # Build a markdown table of scanners so the user can see what's up.
-        scanner_table = "\n\nStatus of scanners:\n\n|Scanner|Address|Last advertisement|\n|---|---|---:|\n"
+        scanner_table = "\n\n扫描器状态：\n\n|扫描器名称|地址|最近一次广播|\n|---|---|---:|\n"
         # Use emoji to indicate if age is "good"
         for scanner in self.coordinator.get_active_scanner_summary():
             age = int(scanner.get("last_stamp_age", 999))
@@ -178,19 +180,20 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
             shortmac = mac_redact(scanner.get("address", "ERR"))
             scanner_table += (
                 f"| {scanner.get('name', 'NAME_ERR')}| [{shortmac}]"
-                f"| {status} {(scanner.get('last_stamp_age', DISTANCE_INFINITE)):.2f} seconds ago.|\n"
+                f"| {status} {(scanner.get('last_stamp_age', DISTANCE_INFINITE)):.2f} 秒前|\n"
             )
         messages["status"] += scanner_table
 
         # return await self.async_step_globalopts()
         return self.async_show_menu(
             step_id="init",
-            menu_options={
-                "globalopts": "Global Options",
-                "selectdevices": "Select Devices",
-                "calibration1_global": "Calibration 1: Global",
-                "calibration2_scanners": "Calibration 2: Scanner RSSI Offsets",
-            },
+            menu_options=[
+                "globalopts",
+                "selectdevices",
+                "area_entities",
+                "calibration1_global",
+                "calibration2_scanners",
+            ],
             description_placeholders=messages,
         )
 
@@ -322,6 +325,24 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
         }
 
         return self.async_show_form(step_id="selectdevices", data_schema=vol.Schema(data_schema))
+
+    async def async_step_area_entities(self, user_input=None):
+        """Handle configuration of entity-based area indicators."""
+        if user_input is not None:
+            self.options.update(user_input)
+            return await self._update_options()
+
+        data_schema = {
+            vol.Optional(
+                CONF_AREA_ENTITIES,
+                default=self.options.get(CONF_AREA_ENTITIES, []),
+            ): EntitySelector(EntitySelectorConfig(multiple=True)),
+        }
+
+        return self.async_show_form(
+            step_id="area_entities",
+            data_schema=vol.Schema(data_schema),
+        )
 
     async def async_step_calibration1_global(self, user_input=None):
         # FIXME: This is ridiculous. But I can't yet find a better way.
