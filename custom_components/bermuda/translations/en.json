@@ -63,13 +63,19 @@
       },
       "area_entities": {
         "title": "Area Entity Indicators",
-        "description": "Select entities to use as area presence indicators. When an entity state is 'on' or 'true', it is considered triggered and its area will be used to help determine where tracked devices are located. When state is 'off' or 'false', it is not triggered. The area is automatically read from the entity or its parent device.",
+        "description": "Select entities to use as area presence indicators. When an entity state is 'on' or 'true', it competes as a virtual scanner at the configured distance. After selecting entities, you can set per-entity distances on the next page.",
         "data": {
-          "area_entities": "Area Indicator Entities"
+          "area_entities": "Area Indicator Entities",
+          "area_entity_distance": "Global Default Virtual Distance (meters)"
         },
         "data_description": {
-          "area_entities": "Choose one or more entities (e.g. binary sensors, switches). Triggered when state is 'on' or 'true', not triggered when 'off' or 'false'. The entity must have an area assigned (either directly or via its device)."
+          "area_entities": "Choose one or more entities (e.g. motion sensors, presence sensors, door contacts). Must have an area assigned.",
+          "area_entity_distance": "Default virtual distance for all entities. You can override per-entity on the next page. Lower = higher priority over BLE. Default 0.1m."
         }
+      },
+      "area_entities_distance": {
+        "title": "Per-Entity Virtual Distance",
+        "description": "Set the virtual competition distance for each selected entity. Entities are grouped by area.\n\n{area_summary}\n\nLower distance = higher priority over BLE scanners. Each entity competes independently against BLE distance measurements."
       },
       "calibration1_global": {
         "title": "Calibration 1: Global",

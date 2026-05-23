@@ -23,6 +23,7 @@ from homeassistant.helpers import intent
 
 from .const import (
     CONF_AREA_ENTITIES,
+    CONF_AREA_ENTITY_DISTANCE,
     CONF_ATTENUATION,
     CONF_DEVICES,
     CONF_DEVTRACK_TIMEOUT,
@@ -65,6 +66,7 @@ MUTABLE_OPTIONS = {
     CONF_SMOOTHING_SAMPLES,
     CONF_ATTENUATION,
     CONF_REF_POWER,
+    CONF_AREA_ENTITY_DISTANCE,
 }
 
 OPTION_TYPES: dict[str, type] = {
@@ -75,6 +77,7 @@ OPTION_TYPES: dict[str, type] = {
     CONF_SMOOTHING_SAMPLES: int,
     CONF_ATTENUATION: float,
     CONF_REF_POWER: float,
+    CONF_AREA_ENTITY_DISTANCE: float,
 }
 
 OPTION_ZH: dict[str, str] = {
@@ -85,6 +88,7 @@ OPTION_ZH: dict[str, str] = {
     CONF_SMOOTHING_SAMPLES: "距离平滑采样数",
     CONF_ATTENUATION: "环境衰减系数",
     CONF_REF_POWER: "参考信号强度",
+    CONF_AREA_ENTITY_DISTANCE: "虚拟竞争距离",
     CONF_AREA_ENTITIES: "区域指示实体",
     CONF_DEVICES: "追踪设备列表",
 }

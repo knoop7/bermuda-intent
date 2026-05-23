@@ -185,6 +185,12 @@ CONF_RSSI_OFFSETS = "rssi_offsets"
 CONF_AREA_ENTITIES = "area_entities"
 DOCS[CONF_AREA_ENTITIES] = "Entity IDs used as area presence indicators. When triggered, the entity's area is used for area detection."
 
+CONF_AREA_ENTITY_DISTANCE, DEFAULT_AREA_ENTITY_DISTANCE = "area_entity_distance", 0.1
+DOCS[CONF_AREA_ENTITY_DISTANCE] = "Global default virtual distance (meters) for area entity competition. When a presence entity triggers, it competes against BLE scanners at this distance. Lower = higher priority over BLE. Default 0.1m."
+
+CONF_AREA_ENTITY_DISTANCES = "area_entity_distances"
+DOCS[CONF_AREA_ENTITY_DISTANCES] = "Per-entity virtual distance overrides. Dict mapping entity_id to float distance in meters. Entities not in this dict use the global default."
+
 CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL = "update_interval", 10
 DOCS[CONF_UPDATE_INTERVAL] = (
     "Maximum time between sensor updates in seconds. Smaller intervals",

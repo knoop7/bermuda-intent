@@ -80,3 +80,32 @@ class BermudaAreaEntityManager:
                         entity_id,
                     )
         return triggered
+
+    def get_triggered_areas_with_distances(
+        self,
+        configured_entities: list[str],
+        per_entity_distances: dict[str, float],
+        default_distance: float,
+    ) -> dict[str, tuple[str, float]]:
+        """Return mapping of area_id -> (area_name, best_distance) for triggered entities.
+
+        For each triggered area, the distance is the MINIMUM of all triggered
+        entities in that area (using per-entity overrides or global default).
+        This allows multiple presence sensors in one room to compete: the one
+        with the smallest configured distance wins.
+        """
+        triggered: dict[str, tuple[str, float]] = {}
+        for entity_id in configured_entities:
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                continue
+            if state.state.lower() not in STATES_TRIGGERED:
+                continue
+            area_id, area_name = self.resolve_entity_area(entity_id)
+            if area_id is None or area_name is None:
+                continue
+            entity_distance = per_entity_distances.get(entity_id, default_distance)
+            existing = triggered.get(area_id)
+            if existing is None or entity_distance < existing[1]:
+                triggered[area_id] = (area_name, entity_distance)
+        return triggered

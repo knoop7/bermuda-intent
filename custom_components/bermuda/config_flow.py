@@ -9,12 +9,15 @@ from bluetooth_data_tools import monotonic_time_coarse
 from homeassistant import config_entries
 from homeassistant.config_entries import OptionsFlowWithConfigEntry
 from homeassistant.core import callback
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import area_registry as ar, device_registry as dr, entity_registry as er
 from homeassistant.helpers.selector import (
     DeviceSelector,
     DeviceSelectorConfig,
     EntitySelector,
     EntitySelectorConfig,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     ObjectSelector,
     SelectOptionDict,
     SelectSelector,
@@ -27,6 +30,8 @@ from .const import (
     ADDR_TYPE_PRIVATE_BLE_DEVICE,
     BDADDR_TYPE_RANDOM_RESOLVABLE,
     CONF_AREA_ENTITIES,
+    CONF_AREA_ENTITY_DISTANCE,
+    CONF_AREA_ENTITY_DISTANCES,
     CONF_ATTENUATION,
     CONF_DEVICES,
     CONF_DEVTRACK_TIMEOUT,
@@ -39,6 +44,7 @@ from .const import (
     CONF_SCANNERS,
     CONF_SMOOTHING_SAMPLES,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_AREA_ENTITY_DISTANCE,
     DEFAULT_ATTENUATION,
     DEFAULT_DEVTRACK_TIMEOUT,
     DEFAULT_MAX_RADIUS,
@@ -327,9 +333,14 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
         return self.async_show_form(step_id="selectdevices", data_schema=vol.Schema(data_schema))
 
     async def async_step_area_entities(self, user_input=None):
-        """Handle configuration of entity-based area indicators."""
+        """Stage 1: Select entities and global default virtual distance."""
         if user_input is not None:
-            self.options.update(user_input)
+            self.options[CONF_AREA_ENTITIES] = user_input.get(CONF_AREA_ENTITIES, [])
+            self.options[CONF_AREA_ENTITY_DISTANCE] = user_input.get(
+                CONF_AREA_ENTITY_DISTANCE, DEFAULT_AREA_ENTITY_DISTANCE
+            )
+            if self.options[CONF_AREA_ENTITIES]:
+                return await self.async_step_area_entities_distance()
             return await self._update_options()
 
         data_schema = {
@@ -337,11 +348,79 @@ class BermudaOptionsFlowHandler(OptionsFlowWithConfigEntry):
                 CONF_AREA_ENTITIES,
                 default=self.options.get(CONF_AREA_ENTITIES, []),
             ): EntitySelector(EntitySelectorConfig(multiple=True)),
+            vol.Optional(
+                CONF_AREA_ENTITY_DISTANCE,
+                default=self.options.get(CONF_AREA_ENTITY_DISTANCE, DEFAULT_AREA_ENTITY_DISTANCE),
+            ): NumberSelector(NumberSelectorConfig(
+                min=0.01, max=999, step=0.1, mode=NumberSelectorMode.BOX,
+                unit_of_measurement="m",
+            )),
         }
 
         return self.async_show_form(
             step_id="area_entities",
             data_schema=vol.Schema(data_schema),
+        )
+
+    async def async_step_area_entities_distance(self, user_input=None):
+        """Stage 2: Per-entity virtual distance configuration, grouped by area."""
+        if user_input is not None:
+            distances: dict[str, float] = {}
+            for entity_id in self.options.get(CONF_AREA_ENTITIES, []):
+                val = user_input.get(entity_id)
+                if val is not None:
+                    distances[entity_id] = float(val)
+            self.options[CONF_AREA_ENTITY_DISTANCES] = distances
+            return await self._update_options()
+
+        entities = self.options.get(CONF_AREA_ENTITIES, [])
+        existing_distances: dict = self.options.get(CONF_AREA_ENTITY_DISTANCES, {})
+        default_distance = self.options.get(CONF_AREA_ENTITY_DISTANCE, DEFAULT_AREA_ENTITY_DISTANCE)
+
+        entity_reg = er.async_get(self.hass)
+        device_reg = dr.async_get(self.hass)
+        area_reg = ar.async_get(self.hass)
+
+        area_groups: dict[str, list[str]] = {}
+        for entity_id in entities:
+            area_name = "未分配区域"
+            entry = entity_reg.async_get(entity_id)
+            if entry:
+                area_id = entry.area_id
+                if area_id is None and entry.device_id:
+                    device = device_reg.async_get(entry.device_id)
+                    if device:
+                        area_id = device.area_id
+                if area_id:
+                    area = area_reg.async_get_area(area_id)
+                    if area:
+                        area_name = area.name
+            area_groups.setdefault(area_name, []).append(entity_id)
+
+        data_schema = {}
+        for area_name in sorted(area_groups.keys()):
+            for entity_id in sorted(area_groups[area_name]):
+                data_schema[
+                    vol.Optional(
+                        entity_id,
+                        default=existing_distances.get(entity_id, default_distance),
+                        description={"suggested_value": existing_distances.get(entity_id, default_distance)},
+                    )
+                ] = NumberSelector(NumberSelectorConfig(
+                    min=0.01, max=999, step=0.1, mode=NumberSelectorMode.BOX,
+                    unit_of_measurement="m",
+                ))
+
+        description_lines = []
+        for area_name in sorted(area_groups.keys()):
+            ents = ", ".join(e.split(".")[-1] for e in sorted(area_groups[area_name]))
+            description_lines.append(f"**{area_name}**: {ents}")
+        description_text = "\n".join(description_lines)
+
+        return self.async_show_form(
+            step_id="area_entities_distance",
+            data_schema=vol.Schema(data_schema),
+            description_placeholders={"area_summary": description_text},
         )
 
     async def async_step_calibration1_global(self, user_input=None):

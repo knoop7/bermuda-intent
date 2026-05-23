@@ -63,6 +63,8 @@ from .const import (
     BDADDR_TYPE_NOT_MAC48,
     BDADDR_TYPE_RANDOM_RESOLVABLE,
     CONF_AREA_ENTITIES,
+    CONF_AREA_ENTITY_DISTANCE,
+    CONF_AREA_ENTITY_DISTANCES,
     CONF_ATTENUATION,
     CONF_DEVICES,
     CONF_DEVTRACK_TIMEOUT,
@@ -72,6 +74,7 @@ from .const import (
     CONF_RSSI_OFFSETS,
     CONF_SMOOTHING_SAMPLES,
     CONF_UPDATE_INTERVAL,
+    DEFAULT_AREA_ENTITY_DISTANCE,
     DEFAULT_ATTENUATION,
     DEFAULT_DEVTRACK_TIMEOUT,
     DEFAULT_MAX_RADIUS,
@@ -1247,33 +1250,76 @@ class BermudaDataUpdateCoordinator(DataUpdateCoordinator):
                 self._refresh_area_by_min_distance(device)
 
     def _apply_area_entity_overrides(self):
-        """Apply area overrides from configured entity indicators.
+        """Apply area entity presence indicators as virtual scanner competitors.
 
-        When a configured entity is in the "on" state, its area becomes a
-        candidate that can override the BLE distance-based area for tracked
-        devices that currently have no area or are further away than the
-        entity's area suggests.
+        When a configured entity (motion sensor, presence sensor, door contact,
+        etc.) is in the "on"/"true" state, it injects a virtual "distance 0"
+        competitor into the area determination pipeline for every tracked device.
+
+        This competes AGAINST real BLE scanner distances using the same logic:
+        - Virtual distance (default 0.1m) beats any scanner further away
+        - If device is already in the entity's area at closer distance, no change
+        - If device is in a DIFFERENT area, the entity wins only if its virtual
+          distance is shorter than the current BLE-determined distance
+        - Multiple triggered entities compete among themselves (closest area wins)
+
+        This makes presence sensors behave like "virtual scanners at distance 0"
+        that are deeply coupled to real scanner area competition.
         """
         configured = self.options.get(CONF_AREA_ENTITIES, [])
         if not configured:
             return
 
-        triggered_areas = self.area_entity_manager.get_triggered_areas(configured)
+        default_dist = self.options.get(CONF_AREA_ENTITY_DISTANCE, DEFAULT_AREA_ENTITY_DISTANCE)
+        per_entity_dists: dict = self.options.get(CONF_AREA_ENTITY_DISTANCES, {})
+
+        triggered_areas = self.area_entity_manager.get_triggered_areas_with_distances(
+            configured, per_entity_dists, default_dist
+        )
         if not triggered_areas:
             return
 
         for device in self.devices.values():
             if not device.create_sensor:
                 continue
-            if device.area_id is None and triggered_areas:
-                first_area_id = next(iter(triggered_areas))
-                device._update_area_and_floor(first_area_id)
-                device.area_distance = 0
-                _LOGGER.debug(
-                    "Area entity override: %s -> %s",
-                    device.name,
-                    triggered_areas[first_area_id],
-                )
+
+            current_distance = device.area_distance
+            current_area_id = device.area_id
+
+            best_virtual_area_id = None
+            best_virtual_area_name = None
+            best_virtual_distance = None
+
+            for area_id, (area_name, virtual_dist) in triggered_areas.items():
+                if current_area_id == area_id:
+                    if current_distance is not None and current_distance <= virtual_dist:
+                        continue
+                    best_virtual_area_id = area_id
+                    best_virtual_area_name = area_name
+                    best_virtual_distance = virtual_dist
+                    break
+
+                if current_distance is None or virtual_dist < current_distance:
+                    if best_virtual_area_id is None or virtual_dist < best_virtual_distance:
+                        best_virtual_area_id = area_id
+                        best_virtual_area_name = area_name
+                        best_virtual_distance = virtual_dist
+
+            if best_virtual_area_id is not None:
+                old_area = device.area_name
+                device._update_area_and_floor(best_virtual_area_id)
+                device.area_distance = best_virtual_distance
+                device.area_rssi = 0
+                if old_area != device.area_name:
+                    _LOGGER.debug(
+                        "Area entity wins competition: %s moved %s -> %s "
+                        "(virtual %.2fm beat BLE %.1fm)",
+                        device.name,
+                        old_area or "none",
+                        best_virtual_area_name,
+                        best_virtual_distance,
+                        current_distance or 999,
+                    )
 
     @dataclass
     class AreaTests:
